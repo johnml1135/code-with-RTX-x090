@@ -1,0 +1,30 @@
+{
+  "deploymentRoot": "..",
+  "executable": "../bin/llama-server.exe",
+  "model": "../models/Ternary-Bonsai-2-27B/Ternary-Bonsai-2-27B-PQ2_0.gguf",
+  "projector": "../models/Ternary-Bonsai-2-27B/Ternary-Bonsai-2-27B-mmproj-Q8_0.gguf",
+  "host": "127.0.0.1",
+  "port": 8080,
+  "alias": "bonsai2-27b",
+  "context": 262144,
+  "parallel": 4,
+  "gpuLayers": -1,
+  "jinja": true,
+  "tools": true,
+  "flashAttention": true,
+  "cacheTypeK": "q4_0",
+  "cacheTypeV": "q4_0",
+  "slotSavePath": "../cache/slots",
+  "logs": {
+    "supervisor": "../logs/supervisor.log",
+    "serverStdout": "../logs/server.stdout.log",
+    "serverStderr": "../logs/server.stderr.log"
+  },
+  "slotCache": {
+    "warmLimitGiB": 15,
+    "coldLimitGiB": 100,
+    "maxSavedJobs": 25,
+    "evictOnlyInactive": true
+  }
+}
+

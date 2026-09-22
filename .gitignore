@@ -1,30 +1,35 @@
-# Local tooling
-.DS_Store
-Thumbs.db
-
-# Logs and runtime state
-logs/
-!logs/.gitkeep
-
-# Downloaded llama.cpp binaries
-tools/
-
-# Downloaded GGUF weights (multi-GB, never commit)
+# This repository is source, documentation, and scripts only.
+# Never add model, runtime, cache, log, state, backup, or credential material.
+*.gguf
+*.safetensors
+*.pt
+*.bin
+*.exe
+*.dll
+*.pdb
+*.zip
+*.7z
+*.iso
+bin/
 models/
-# Python
-__pycache__/
-*.py[cod]
-*.pyd
+cache/
+logs/
+run/
+backups/
+hashes/
+*.bak
+*.orig
+*.rej
+*.pid
+*.status.json
+*.manifest.json
+*.kv
+*.sha256
+*.hash
+.env
+.env.*
+config/server.json
+config/codex.config.toml
+config/claude.env.ps1
+config/task.xml
 
-# Virtual environments
-.venv/
-venv/
-ENV/
-
-# Local tooling
-.DS_Store
-Thumbs.db
-
-# Ollama Copilot Fixer working dirs
-ollama_copilot_fixer_*/
-llama.log
