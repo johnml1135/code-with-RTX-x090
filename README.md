@@ -19,7 +19,7 @@ The vLLM behaviors we want are available as llama-server flags:
 |---|---|
 | One shared, paged KV pool; idle requests don't reserve memory | `--kv-unified` with `--ctx-size 614400 --parallel 5` |
 | Automatic prefix caching; finished requests stay cached | slot prompt cache plus `--slot-prompt-similarity`, which is on by default |
-| CPU offload tier for inactive sequences | `--cache-ram 8192` (host-RAM prompt cache) |
+| CPU offload tier for inactive sequences | `--cache-ram` (host-RAM prompt cache; **off here**, see Memory) |
 | Disk tier (LMCache-style) | `--slot-save-path`, driven by `scripts/Bonsai-Session.ps1` |
 
 ## What runs
@@ -31,9 +31,9 @@ The vLLM behaviors we want are available as llama-server flags:
 - `--checkpoint-min-step 0`: works around a llama.cpp checkpoint-eviction bug that forced short
   prompts to re-prefill every turn on hybrid models like Bonsai. The bug is fixed upstream in
   PR #28302, which Prism's b10709 predates.
-- **Warm tier in RAM**: llama-server moves idle sessions to an 8 GiB host prompt cache and
-  restores them automatically when their agent returns (measured: 20K-token resume in 0.8 s vs
-  18 s re-prefill).
+- `--cache-ram 0 --ctx-checkpoints 4`: no host-RAM prompt cache and at most 4 checkpoints per slot.
+  Both live in host memory and count against Windows commit (see Memory). Each of the 5 slots
+  still keeps its own agent's context on the GPU.
 - **Cold tier on G:**: up to 17 saved sessions / 100 GiB. Saving is explicit (see below).
 - `--no-mmap`: the model loads straight to the GPU. Base RAM is about 1.5 GiB, down from about
   7.7 GiB with mmap.
@@ -55,13 +55,38 @@ large sits on C:.
 | ~14K-token prompt, decode tok/s per job | 58 | 23 | 13 |
 
 - A single 229K-token session decodes at about 17 tok/s. Its prefill took about 7 minutes.
-- Server RAM peaks at about 9 GiB under load (1.5 GiB base plus the 8 GiB cache cap).
 - VRAM sits at about 22 of 24.5 GB.
 - Saving a session to G: takes about 8.5 s per 94K tokens (1.8 GB). Restoring takes about 1.5 s.
 
 Concurrency interleaves on one GPU. More jobs raise total throughput, but each job runs slower.
 MTP speculative decoding (community `ProCreations/Ternary-Bonsai-2-27B-MTP`) was measured at
 roughly 5× slower on this card and is not used.
+
+## Memory: commit, not RAM
+
+On Windows, the GPU driver (WDDM) charges **commit** for every byte a process allocates in VRAM,
+so the pages can be evicted if needed. GeForce cards can't opt out. The server's resident RAM is
+small, but its commit is not. Windows refuses new allocations once system-wide commit reaches
+RAM + pagefile, even when RAM is free, so large builds fail while Bonsai runs.
+
+Measured llama-server commit on this machine (5 slots):
+
+| Config | Idle | After agent load |
+|---|---|---|
+| 614K pool, 8 GiB RAM cache, 32 checkpoints/slot (old) | 23.2 GB | 35.9 GB |
+| 614K pool, no RAM cache, 4 checkpoints/slot (**current**) | 23.3 GB | 26.3 GB |
+| 131K pool, no RAM cache, 4 checkpoints/slot | 12.2 GB | 15.2 GB |
+
+The idle floor tracks the KV pool, at about 23 KB of commit per token of pool. Give Windows a
+**fixed** pagefile large enough to cover the server. The system-managed default grows too late,
+after builds have already failed. From an elevated PowerShell, then reboot:
+
+```powershell
+New-CimInstance -ClassName Win32_PageFileSetting -Property @{ Name = 'G:\pagefile.sys'; InitialSize = 32768; MaximumSize = 65536 }
+```
+
+This reserved commit is almost never written to the pagefile, so disk speed doesn't matter.
+`Stop-Bonsai.ps1` frees all of it when you need it.
 
 ## Install
 

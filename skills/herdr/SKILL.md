@@ -343,10 +343,12 @@ workers together cannot exceed the pool, so pi's context window is set to 131,07
 Concurrent workers share one GPU: ~60 tok/s decode alone, much less each when several are busy.
 Never start a second server.
 
-Prefix caching is automatic: idle workers move to an 8 GiB host-RAM prompt cache and resume by
-prompt prefix, and the chat template renders tools before the system prompt, so a harness prompt
-is shared across projects. Keep one tool profile per harness where you can: a different `--tools`
-list changes the prefix and costs a fresh harness prefill.
+Prefix caching is per slot: each worker's context stays on the GPU in its slot and resumes by
+prompt prefix (there is no host-RAM prompt cache; it cost ~10 GB of Windows commit). With more
+than 5 workers, an evicted worker re-prefills. The chat template renders tools before the system
+prompt, so keep one tool profile per harness: a different `--tools` list changes the prefix.
+The server holds ~23-26 GB of Windows commit (VRAM backing); if a build fails for lack of commit,
+stop Bonsai (`scripts/Stop-Bonsai.ps1`) rather than shrinking the config.
 
 Launch helpers in the repo's `scripts/`: `Invoke-BonsaiPi.ps1`, `Invoke-BonsaiCodex.ps1`,
 `Invoke-BonsaiClaude.ps1` (each waits for health and scopes endpoint settings to its process;
