@@ -311,11 +311,11 @@ resume from it. Tell the user which action you took and why in one line.
 
 ## Luna: this user's standard subagent
 
-"Luna" is not a Herdr kind. It is `codex` running the `gpt-5.6-luna` model at `xhigh` reasoning
+"Luna" is not a Herdr kind. It is `codex` running the `gpt-6-luna` model at `xhigh` reasoning
 effort. When the user asks for Luna subagents, start them exactly this way:
 
 ```bash
-herdr agent start <name> --kind codex --pane <returned-pane-id> -- -m gpt-5.6-luna -c model_reasoning_effort="xhigh"
+herdr agent start <name> --kind codex --pane <returned-pane-id> -- -m gpt-6-luna -c model_reasoning_effort="xhigh"
 ```
 
 The account default is `gpt-6-astra` (Astra), so omitting `-m` silently gives the wrong agent. If a

@@ -148,7 +148,7 @@ installer, junctions it into `~/.agents/skills` (Codex, pi) and `~/.claude/skill
 edits are version controlled here. When you say "use herdr to run a subagent to ...", the skill:
 
 - routes to Bonsai with pi, unless 5 Bonsai workers are live;
-- otherwise routes to Luna (`gpt-5.6-luna`), or tells you if Luna has no credits;
+- otherwise routes to Luna (`gpt-6-luna`), or tells you if Luna has no credits;
 - supervises the worker every 5-15 minutes;
 - re-checks pi, the Herdr hooks, the runtime and the model once a week, using the "Last checked"
   date in the skill.
