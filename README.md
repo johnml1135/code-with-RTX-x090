@@ -79,11 +79,10 @@ Measured llama-server commit on this machine (5 slots):
 
 The idle floor tracks the KV pool, at about 23 KB of commit per token of pool. Give Windows a
 **fixed** pagefile large enough to cover the server. The system-managed default grows too late,
-after builds have already failed. From an elevated PowerShell, then reboot:
-
-```powershell
-New-CimInstance -ClassName Win32_PageFileSetting -Property @{ Name = 'G:\pagefile.sys'; InitialSize = 32768; MaximumSize = 65536 }
-```
+after builds have already failed. From an elevated PowerShell, run
+`scripts\Set-BonsaiPagefile.ps1`, which adds `G:\pagefile.sys` at 32-64 GB. On this machine
+it took effect immediately, raising the commit limit from 67.7 GB to 99.7 GB; Windows may otherwise
+need a reboot.
 
 This reserved commit is almost never written to the pagefile, so disk speed doesn't matter.
 `Stop-Bonsai.ps1` frees all of it when you need it.
