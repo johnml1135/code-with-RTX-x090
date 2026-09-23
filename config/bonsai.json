@@ -1,0 +1,27 @@
+{
+  "root": "G:\\bonsai-deployment",
+  "server": "{root}\\bin\\llama-server.exe",
+  "host": "127.0.0.1",
+  "port": 8080,
+  "alias": "bonsai2-27b",
+  "sessions": "{root}\\sessions",
+  "logs": "{root}\\logs",
+  "maxSessions": 20,
+  "maxSessionGiB": 100,
+  "args": [
+    "--model", "{root}\\models\\Ternary-Bonsai-2-27B\\Ternary-Bonsai-2-27B-PQ2_0.gguf",
+    "--n-gpu-layers", "-1",
+    "--flash-attn", "on",
+    "--cache-type-k", "q4_0",
+    "--cache-type-v", "q4_0",
+    "--ctx-size", "614400",
+    "--parallel", "3",
+    "--kv-unified",
+    "--cache-ram", "8192",
+    "--no-mmap",
+    "--jinja",
+    "--chat-template-file", "{repo}\\config\\bonsai-chat-template.jinja",
+    "--reasoning-effort", "medium",
+    "--slot-save-path", "{root}\\sessions"
+  ]
+}

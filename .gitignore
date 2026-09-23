@@ -28,8 +28,4 @@ hashes/
 *.hash
 .env
 .env.*
-config/server.json
-config/codex.config.toml
-config/claude.env.ps1
-config/task.xml
 

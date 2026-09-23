@@ -1,14 +1,9 @@
-[CmdletBinding()]
-param(
-    [Parameter(Mandatory)][string]$ConfigPath,
-    [Parameter(ValueFromRemainingArguments)][string[]]$ArgumentList
-)
+# Runs Codex against the local Bonsai server via the bonsai-local profile (see Install-Bonsai.ps1).
+#   Invoke-BonsaiCodex.ps1 [codex args...]
 $ErrorActionPreference = 'Stop'
-. (Join-Path $PSScriptRoot 'Lib-Bonsai.ps1')
-$cfg = Import-BonsaiConfig $ConfigPath
-[void](Wait-BonsaiHealth $cfg)
+Import-Module (Join-Path $PSScriptRoot 'Bonsai.psm1') -Force
+Wait-BonsaiReady (Get-BonsaiConfig) 60
 $env:BONSAI_LOCAL_API_KEY = 'local-only'
-$codex = (Get-Command codex.exe,codex -ErrorAction Stop | Select-Object -First 1).Source
-& $codex '--profile' 'bonsai_local' @ArgumentList
+$codex = (Get-Command codex -ErrorAction Stop).Source
+& $codex -p bonsai-local @args
 exit $LASTEXITCODE
-

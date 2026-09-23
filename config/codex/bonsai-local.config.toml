@@ -1,0 +1,14 @@
+# Codex profile layered on the base config by `codex -p bonsai-local`.
+# The cloud default in config.toml stays unchanged. Install-Bonsai.ps1 copies this to $CODEX_HOME.
+model = "bonsai2-27b"
+model_provider = "bonsai_local"
+model_reasoning_effort = "medium"
+
+[model_providers.bonsai_local]
+name = "PrismML Bonsai 2 local"
+base_url = "http://127.0.0.1:8080/v1"
+env_key = "BONSAI_LOCAL_API_KEY"
+wire_api = "responses"
+request_max_retries = 2
+stream_max_retries = 2
+stream_idle_timeout_ms = 300000
