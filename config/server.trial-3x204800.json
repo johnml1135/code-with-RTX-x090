@@ -6,10 +6,11 @@
   "host": "127.0.0.1",
   "port": 8080,
   "alias": "bonsai2-27b",
-  "contextPerSlot": 262144,
+  "contextPerSlot": 204800,
   "warmLiveSlots": 2,
-  "temporaryTrialSlot": false,
-  "preferredParallel": 2,
+  "temporaryTrialSlot": true,
+  "controlledCapacityTrial": true,
+  "preferredParallel": 3,
   "fallbackParallel": 2,
   "gpuLayers": -1,
   "jinja": true,
@@ -30,12 +31,12 @@
   "startupTimeoutSeconds": 900,
   "healthPollSeconds": 5,
   "healthFailureThreshold": 10,
-  "slotSavePath": "../cache/slots",
-  "runStatePath": "../run",
+  "slotSavePath": "../cache/slots/trial-community-3x204800",
+  "runStatePath": "../run/trial-community-3x204800",
   "logs": {
-    "supervisor": "../logs/supervisor.log",
-    "serverStdout": "../logs/server.stdout.log",
-    "serverStderr": "../logs/server.stderr.log"
+    "supervisor": "../logs/trial-community-3x204800.supervisor.log",
+    "serverStdout": "../logs/trial-community-3x204800.stdout.log",
+    "serverStderr": "../logs/trial-community-3x204800.stderr.log"
   },
   "slotCache": {
     "diskLimitGiB": 100,

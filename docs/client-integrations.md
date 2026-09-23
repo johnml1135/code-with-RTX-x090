@@ -32,7 +32,7 @@ review the installed Herdr documentation and run the documented integration
 refresh command, for example herdr integration install claude, only with
 explicit approval.
 
-Herdr and client conversation state is separate from slot files. The local
-server queue can admit up to ten jobs with four executing, but it does not
-provide a durable mapping from a client session to a saved KV slot.
-
+Herdr and client conversation state is separate from slot files. The server
+executes at most three jobs in the preferred mode, or two after fallback;
+additional requests wait in the server queue. This does not provide a durable
+mapping from a client session to a saved KV slot.
