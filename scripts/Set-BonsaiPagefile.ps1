@@ -1,17 +1,20 @@
-# Adds a fixed-size pagefile so Windows' commit limit covers llama-server's VRAM-backed commit
-# (see README "Memory"). Run elevated; takes effect after a reboot.
-#   Set-BonsaiPagefile.ps1 [-Path G:\pagefile.sys] [-InitialMB 32768] [-MaximumMB 65536]
+# Sets fixed-size pagefiles so Windows' commit limit covers llama-server's VRAM-backed commit
+# (see README "Memory"): a small one on the system SSD (crash dumps) and a large one on the G: HDD.
+# Run elevated. Writes the PagingFiles list in the given order; shrinking takes effect after a reboot.
+#   Set-BonsaiPagefile.ps1                  C: 6 GB, then G: 60 GB
+#   Set-BonsaiPagefile.ps1 -Log <file>      write the result to a file (for an elevated child process)
 [CmdletBinding()]
-param([string]$Path = 'G:\pagefile.sys', [uint32]$InitialMB = 32768, [uint32]$MaximumMB = 65536, [string]$Log)
+param(
+    [string[]]$PagingFiles = @('C:\pagefile.sys 6144 6144', 'G:\pagefile.sys 61440 61440'),
+    [string]$Log
+)
 $ErrorActionPreference = 'Stop'
 try {
-    $existing = Get-CimInstance Win32_PageFileSetting | Where-Object Name -eq $Path
-    if ($existing) {
-        $existing | Set-CimInstance -Property @{ InitialSize = $InitialMB; MaximumSize = $MaximumMB }
-    } else {
-        New-CimInstance -ClassName Win32_PageFileSetting -Property @{ Name = $Path; InitialSize = $InitialMB; MaximumSize = $MaximumMB } | Out-Null
-    }
-    $result = Get-CimInstance Win32_PageFileSetting | ForEach-Object { "$($_.Name) initial=$($_.InitialSize)MB max=$($_.MaximumSize)MB" }
+    $cs = Get-CimInstance Win32_ComputerSystem
+    if ($cs.AutomaticManagedPagefile) { $cs | Set-CimInstance -Property @{ AutomaticManagedPagefile = $false } }
+    $key = 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management'
+    Set-ItemProperty -LiteralPath $key -Name PagingFiles -Type MultiString -Value $PagingFiles
+    $result = @('PagingFiles (in order):') + ((Get-ItemProperty -LiteralPath $key).PagingFiles | ForEach-Object { "  $_" })
     $result += 'reboot to apply'
 } catch {
     $result = "ERROR: $($_.Exception.Message)"
