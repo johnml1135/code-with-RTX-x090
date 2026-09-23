@@ -1,6 +1,6 @@
 ---
 name: herdr
-description: "Control Herdr, a terminal multiplexer for coding agents. Use only when the user explicitly mentions Herdr or asks to use Herdr to inspect or control panes, tabs, workspaces, commands, or another agent — including \"use herdr to run a subagent to ...\" / \"have herdr spin a subagent to ...\", which defaults to local Bonsai 2 (pi harness), falls back to Luna when 5 Bonsai workers are live, and sets up a 5-15 minute supervision check. Do not use merely because a task could benefit from a background terminal, delegation, or parallel work. Requires HERDR_ENV=1."
+description: "Control Herdr, a terminal multiplexer for coding agents. Use only when the user explicitly mentions Herdr or asks to use Herdr to inspect or control panes, tabs, workspaces, commands, or another agent — including \"use herdr to run a subagent to ...\" / \"have herdr spin a subagent to ...\", which defaults to local Bonsai 2 (pi harness), falls back to luna-6 when 5 Bonsai workers are live, and sets up a 5-15 minute supervision check. Do not use merely because a task could benefit from a background terminal, delegation, or parallel work. Requires HERDR_ENV=1."
 ---
 
 # Herdr
@@ -217,7 +217,7 @@ If a larger recent read still does not reveal the completed response, ask the ag
 
 "Use herdr to run a subagent to ..." and "have herdr spin a subagent to ..." are the whole request.
 Do not ask which model; choose, say which and why in one line, then dispatch. A model or harness the
-user names explicitly always wins (for example "... with claude", "... on luna", "... read-only").
+user names explicitly always wins (for example "... with claude", "... on luna-6", "... read-only").
 
 1. **Keep the setup current.** If the "Last checked" date in the maintenance section below is more
    than 7 days old, run that check first and update the date.
@@ -225,12 +225,12 @@ user names explicitly always wins (for example "... with claude", "... on luna",
    Load = the larger of (a) slots with `is_processing: true` in `GET /slots`, and (b) live
    `herdr agent list` entries named `bonsai-*` (an idle worker still holds a context in the pool).
 3. **Choose.** Health ok and load < 5 → **Bonsai** (the default). Load ≥ 5, or health failing →
-   **Luna**. Never start a second llama-server and never wait for a slot to free up.
-   If Luna fails to start or its first turn reports a usage, credit, or rate limit, stop it, tell
+   **luna-6**. Never start a second llama-server and never wait for a slot to free up.
+   If luna-6 fails to start or its first turn reports a usage, credit, or rate limit, stop it, tell
    the user, and offer to queue the task on Bonsai (a 6th worker's requests wait for a free slot).
    Do not silently substitute any other model.
 4. **Name and launch** in a sibling pane (`pane split --current ... --no-focus`). Bonsai workers are
-   named `bonsai-<task>` so step 2 can count them; Luna workers use any other name.
+   named `bonsai-<task>` so step 2 can count them; luna-6 workers use any other name.
    - **Bonsai, pi harness (default).** Pick the tool profile from the task:
      ```
      herdr pane run <pane> "$env:PI_OFFLINE='1'"
@@ -249,14 +249,41 @@ user names explicitly always wins (for example "... with claude", "... on luna",
      herdr agent start bonsai-<task> --kind codex --pane <pane> -- -p bonsai-local
      # Claude Code: run <repo>/scripts/Invoke-BonsaiClaude.ps1 in the pane
      ```
-   - **Luna:** the command in the Luna section below.
+   - **luna-6:** the command in the luna-6 section below.
+   Before launching any sandboxed worker (Codex, Claude Code), **grant its filesystem access up
+   front** — see "Grant filesystem access before launch" below. A worker that discovers a denied path
+   mid-task burns its turn on workarounds instead of the work.
 5. **Prompt** with a bounded, self-contained brief: worktree, plan/spec path, exit criteria, which
    build commands are allowed, "no merge/push", where to write its evidence, and "end with a final
    report". A pi pane never shows `blocked` (no approval dialogs); supervise it by reading.
 6. **Arm supervision** (next section) in the same turn.
 
 If a Bonsai worker proves too weak for the task (repeated wrong edits, loops, lost context),
-stop it, say so, and re-dispatch the same brief to Luna; do not keep correcting it indefinitely.
+stop it, say so, and re-dispatch the same brief to luna-6; do not keep correcting it indefinitely.
+
+## Grant filesystem access before launch
+
+A Codex worker in `-s workspace-write` can write only under its cwd and each `--add-dir`, and on
+Windows it is also denied some reads under the user profile (for example `%APPDATA%\NuGet\NuGet.Config`).
+Claude Code workers likewise need `--add-dir` for roots outside the cwd. Workers cannot approve their
+own escalations, so a missing root means a stalled or improvised run: a hand-rolled empty NuGet
+config, a web search for why `C:\Users\<me>\TestResults` is denied, a question dialog asking you to
+clear the machine. Before `agent start`, walk the brief and list every path the worker will touch:
+
+| Need | Typical paths | What to do |
+|---|---|---|
+| Source it edits | its git worktree | cwd = the worktree (or the repo root that contains it) |
+| Inputs from other repos | grammars, corpora, fixtures, word lists, sibling repos | `--add-dir` if it must write there; otherwise confirm it is readable |
+| Outputs | report folder, scratchpad, result TSV/JSON, shared lock files | keep them under the cwd or `--add-dir` them; name them in the brief |
+| Test results | `TestResults/`, NUnit `WorkDirectory`, coverage output | tell it to pass `--results-directory <worktree>\TestResults` (the default under the profile is denied) |
+| Package / build caches | `~/.nuget/packages`, `%APPDATA%\NuGet`, `~/.cargo`, `target/`, npm cache | **run the restore/fetch yourself first** (`dotnet restore`, `cargo fetch`, `npm ci`) and tell it to build with `--no-restore` / `--offline`; a fresh worktree has no `obj/` |
+| Temp and tool caches | SQLite caches, `%TEMP%` subfolders | point them at a folder under an allowed root |
+
+Pass the roots on the launch line (see the luna-6 command below) and put the same list in the brief:
+"you can write to X and Y; packages are restored, use --no-restore; if a new restore or another root
+is needed, stop and say so" — so a denial is reported rather than worked around. Grant only what the
+brief needs; never widen to `danger-full-access` or `--dangerously-bypass-approvals-and-sandbox` to
+skip this step.
 
 ## Supervise every dispatched worker on a 5-15 minute check
 
@@ -317,7 +344,7 @@ stuck `/slots` entry with no live output. Then pick one:
 | Plan is sound and the worker is healthy; it misread one thing | **Correct** in place (one prompt). |
 | Useful progress exists, but its context is polluted: loops, stale assumptions, near the window, ignored corrections | **Restart**: record what is done and what is left, kill it (`herdr agent send-keys <name> ctrl+c`, then close the pane you created), and dispatch a fresh worker with a brief that names the finished parts, the remaining steps, and the trap it fell into. Reuse the same worktree. |
 | Little work remains, or the remaining step is subtle and explaining it costs more than doing it | **Kill and finish it yourself** in the worktree, then verify as usual. |
-| The task is beyond this worker: a Bonsai worker failing on reasoning-heavy work after one restart, or the same failure twice | **Kill and escalate**: re-dispatch to Luna (or ask the user if Luna has no credits). |
+| The task is beyond this worker: a Bonsai worker failing on reasoning-heavy work after one restart, or the same failure twice | **Kill and escalate**: re-dispatch to luna-6 (or ask the user if luna-6 has no credits). |
 | The brief itself was wrong or the goal changed | **Stop** the worker and tell the user before re-planning. |
 
 Allow at most one restart per worker before finishing it yourself or escalating; do not keep
@@ -325,19 +352,24 @@ nudging a lost worker. Before killing, save anything useful: its diff stays in t
 Bonsai worker's context can be saved with `scripts/Bonsai-Session.ps1 save` if a later worker should
 resume from it. Tell the user which action you took and why in one line.
 
-## Luna: this user's standard subagent
+## luna-6: this user's standard subagent
 
-"Luna" is not a Herdr kind. It is `codex` running the `gpt-6-luna` model at `xhigh` reasoning
-effort. When the user asks for Luna subagents, start them exactly this way:
+"luna-6" is not a Herdr kind. It is `codex` running the `gpt-6-luna` model at `xhigh` reasoning
+effort. When the user asks for luna-6 subagents, start them exactly this way:
 
 ```bash
-herdr agent start <name> --kind codex --pane <returned-pane-id> -- -m gpt-6-luna -c model_reasoning_effort="xhigh"
+herdr agent start <name> --kind codex --pane <returned-pane-id> -- -m gpt-6-luna -c model_reasoning_effort="xhigh" -s workspace-write -a on-request [--add-dir <root> ...] [--search]
 ```
 
-The account default is `gpt-6-astra` (Astra), so omitting `-m` silently gives the wrong agent. If a
-running agent's footer reads `gpt-6-astra`, it is not Luna — restart it.
+Choose the `--add-dir` roots and pre-run restores per "Grant filesystem access before launch" above;
+add `--search` for research briefs.
 
-Luna agents belong **next to the main chat**: split a sibling pane in the caller's current tab with
+The account default is `gpt-6-astra` (Astra), so omitting `-m` silently gives the wrong agent. If a
+running agent's footer reads `gpt-6-astra` or `GPT-5.6-Luna`, it is not luna-6 — restart it.
+Never launch `gpt-5.6-luna`: it is the retired Luna 5.6, and a brief or script that still names it is
+stale; use `gpt-6-luna`.
+
+luna-6 agents belong **next to the main chat**: split a sibling pane in the caller's current tab with
 `herdr pane split --current --direction right --cwd "$PWD" --no-focus`. Never create a new tab or
 workspace for them unless the user asks for that topology.
 
