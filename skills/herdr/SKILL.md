@@ -288,6 +288,22 @@ elsewhere, loop `herdr agent wait <name> --timeout <interval-ms>`. Each check:
 
 Tighten to 5 minutes after any correction; relax toward 15 only after two quiet on-track checks.
 
+### The schedule ends itself when the work is done
+
+A supervision schedule exists only while there is work in flight. Every check starts by asking
+whether any remains, and when none does, that check deletes the schedule (`CronDelete` / stop
+the `/loop`) in the same turn and tells the user in one line. Work in flight means a live worker
+that is `working` or `blocked`, a verification or build you started, or a follow-up you own and
+can act on now. Waiting for someone outside the session doesn't count: a PR awaiting a
+maintainer, a CI run you can't trigger, or a decision the user hasn't made yet. In those
+cases, stop the schedule and state what it's waiting on and how to resume.
+
+Write that stop condition into the scheduled prompt itself (for example "if every listed
+worker is done and nothing I own remains, delete this schedule and report"), because the
+prompt that fires later is all the check will see. As a backstop, two consecutive checks that
+find no change also end the schedule; don't rearm a watch just because an external party might
+eventually respond. The user can ask for a slow external watch explicitly.
+
 ### Has it lost its way?
 
 Judge by evidence, not by the worker's narration. Signs it is lost: no new diff, test, or finding
